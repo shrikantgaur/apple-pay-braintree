@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Apple Pay with Braintree - Dynamic Product</title>
+  <script src="https://js.braintreegateway.com/web/3.92.2/js/client.min.js"></script>
+  <script src="https://js.braintreegateway.com/web/3.92.2/js/apple-pay.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 50px;
+    }
+    .product-card {
+      max-width: 300px;
+      margin: 0 auto 30px auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .product-card img {
+      max-width: 100%;
+      height: auto;
+    }
+    #apple-pay-button {
+      width: 250px;
+      margin: 0 auto;
+    }
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Apple Pay Checkout</h1>
+
+  <!-- Product Card -->
+  <div class="product-card" data-price="19.99">
+    <img src="https://fastly.picsum.photos/id/4/5000/3333.jpg?hmac=ghf06FdmgiD0-G4c9DdNM8RnBIN7BO0-ZGEw47khHP4" alt="Product Image">
+    <h2 class="product-title">Sample Product</h2>
+    <p class="product-description">This is a simple description of the product you’re buying.</p>
+    <p class="product-price">$19.99</p>
+  </div>
+
+  <!-- Apple Pay Button -->
+  <div id="apple-pay-button"></div>
+
+  <div id="result"></div>
+
+  <!-- JS Integration -->
+  <script>
+    fetch('/client_token')
+      .then(response => response.text())
+      .then(clientToken => {
+        braintree.client.create({
+          authorization: clientToken
+        }, function (clientErr, clientInstance) {
+          if (clientErr) {
+            console.error(clientErr);
+            return;
+          }
+
+          braintree.applePay.create({
+            client: clientInstance
+          }, function (applePayErr, applePayInstance) {
+            if (applePayErr) {
+              console.error(applePayErr);
+              return;
+            }
+
+            if (!window.ApplePaySession || !ApplePaySession.canMakePayments()) {
+              document.getElementById('result').innerText = 'Apple Pay is not available.';
+              return;
+            }
+
+            const button = document.createElement('button');
+            button.className = 'apple-pay-button';
+            button.style.cssText = 'appearance: -apple-pay-button; -webkit-appearance: -apple-pay-button; width: 100%; height: 44px;';
+
+            button.onclick = function () {
+              // Get product price dynamically
+              const productCard = document.querySelector('.product-card');
+              const totalAmount = productCard.getAttribute('data-price') || '0.00';
+
+              const paymentRequest = applePayInstance.createPaymentRequest({
+                total: { label: 'Your Company', amount: totalAmount }
+              });
+
+              const session = new ApplePaySession(3, paymentRequest);
+
+              session.onvalidatemerchant = function (event) {
+                applePayInstance.performValidation({
+                  validationURL: event.validationURL,
+                  displayName: 'Your Company'
+                }, function (err, merchantSession) {
+                  if (err) {
+                    console.error(err);
+                    session.abort();
+                    return;
+                  }
+                  session.completeMerchantValidation(merchantSession);
+                });
+              };
+
+              session.onpaymentauthorized = function (event) {
+                applePayInstance.tokenize({
+                  token: event.payment.token
+                }, function (err, payload) {
+                  if (err) {
+                    console.error(err);
+                    session.completePayment(ApplePaySession.STATUS_FAILURE);
+                    return;
+                  }
+
+                  fetch('/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentMethodNonce: payload.nonce, amount: totalAmount })
+                  })
+                  .then(response => response.json())
+                  .then(result => {
+                    if (result.success) {
+                      session.completePayment(ApplePaySession.STATUS_SUCCESS);
+                      document.getElementById('result').innerText = 'Payment successful! Transaction ID: ' + result.transactionId;
+                    } else {
+                      session.completePayment(ApplePaySession.STATUS_FAILURE);
+                      document.getElementById('result').innerText = 'Payment failed: ' + result.message;
+                    }
+                  });
+                });
+              };
+
+              session.begin();
+            };
+
+            document.getElementById('apple-pay-button').appendChild(button);
+          });
+        });
+      });
+  </script>
+
+</body>
+</html>
