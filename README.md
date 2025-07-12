@@ -42,8 +42,9 @@ Includes:
 ### 1️⃣ **Clone this repo**
 
 ```bash
-git clone https://github.com/yourusername/apple-pay-braintree-example.git
-cd apple-pay-braintree-example
+git clone https://github.com/shrikantgaur/apple-pay-braintree.git
+cd apple-pay-braintree
+
 ```
 
 ---
