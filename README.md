@@ -1,4 +1,4 @@
-## 🍏 Apple Pay + Braintree Node Example
+##  Apple Pay + Braintree Node Example
 
 A **simple example** of accepting **Apple Pay payments** using **Braintree** in a Node.js app.
 Includes:
