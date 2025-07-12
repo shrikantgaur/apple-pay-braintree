@@ -18,11 +18,13 @@ Includes:
 │   └── index.html
 ├── .well-known/
 │   └── apple-developer-merchantid-domain-association
+├── certs/
+│   ├── localhost+2.pem         # SSL certificate
+│   └── localhost+2-key.pem     # SSL key
 ├── server.js
 ├── package.json
-├── localhost+2.pem (SSL cert)
-├── localhost+2-key.pem (SSL key)
 └── README.md
+
 ```
 
 ---
@@ -112,7 +114,14 @@ mkcert localhost 127.0.0.1 ::1
 This creates:
 
 * `localhost+2.pem` (cert)
-* `localhost+2-key.pem` (key)
+* `localhost+2-key.pem` (key) 
+
+Copy the generated .pem files to a certs/ folder:
+
+```bash
+mv localhost+2.pem certs/
+mv localhost+2-key.pem certs/
+```
 
 ---
 
